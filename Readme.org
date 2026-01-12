@@ -2,6 +2,8 @@
 
 * SwiftMac
 
+*An [[https://intelligrit.com#labs][Intelligrit Labs]] Project*
+
 #+HTML: <p align="center"><img src="logo.png" alt="SwiftMac logo" width="200"></p>
 
 A fast, async Emacspeak speech server for macOS written in Swift.
@@ -23,7 +25,7 @@ A fast, async Emacspeak speech server for macOS written in Swift.
 The easiest installation method for macOS users:
 
 #+BEGIN_SRC shell
-  brew tap robertmeta/swiftmac
+  brew tap intelligrit/swiftmac
   brew install swiftmac
 #+END_SRC
 
@@ -47,7 +49,7 @@ For manual Emacspeak integration:
 
 *** Binary Release (swiftmac.tar.gz)
 
-Download from [[https://github.com/robertmeta/swiftmac/releases/latest][GitHub releases]].
+Download from [[https://github.com/intelligrit/swiftmac/releases/latest][GitHub releases]].
 
 Copy the extracted files to the $EMACSPEAK_DIR/servers and
 then add the swiftmac server to your emacs config, for more
