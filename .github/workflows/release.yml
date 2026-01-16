@@ -117,7 +117,7 @@ jobs:
             printf "### Installation\n\n"
             printf "**1. Download and extract:**\n\n"
             printf '```bash\n'
-            printf "curl -L https://github.com/robertmeta/swiftmac/releases/download/v%s/swiftmac-%s.tar.gz | tar xz\n" "$VERSION" "$VERSION"
+            printf "curl -L https://github.com/intelligrit/swiftmac/releases/download/v%s/swiftmac-%s.tar.gz | tar xz\n" "$VERSION" "$VERSION"
             printf "cd swiftmac\n"
             printf '```\n\n'
             printf "**2. Install to Emacspeak:**\n\n"
@@ -145,7 +145,7 @@ jobs:
             printf "### Changes\n\n"
             echo "$CHANGES"
             printf "\n\n---\n\n"
-            printf "For more information, see the [full documentation](https://github.com/robertmeta/swiftmac).\n"
+            printf "For more information, see the [full documentation](https://github.com/intelligrit/swiftmac).\n"
           } > RELEASE_NOTES.md
 
           echo "Release notes created"
@@ -163,8 +163,8 @@ jobs:
             --latest
 
           echo "✅ Release created successfully!"
-          echo "📦 Download: https://github.com/robertmeta/swiftmac/releases/download/v$VERSION/swiftmac-$VERSION.tar.gz"
-          echo "🔗 View release: https://github.com/robertmeta/swiftmac/releases/tag/v$VERSION"
+          echo "📦 Download: https://github.com/intelligrit/swiftmac/releases/download/v$VERSION/swiftmac-$VERSION.tar.gz"
+          echo "🔗 View release: https://github.com/intelligrit/swiftmac/releases/tag/v$VERSION"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -172,4 +172,4 @@ jobs:
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
           echo "Released SwiftMac version $VERSION"
-          echo "Download: https://github.com/robertmeta/swiftmac/releases/download/v$VERSION/swiftmac-$VERSION.tar.gz"
+          echo "Download: https://github.com/intelligrit/swiftmac/releases/download/v$VERSION/swiftmac-$VERSION.tar.gz"

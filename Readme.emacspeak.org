@@ -3,7 +3,7 @@
 This is a server for Emacspeak for modern macs using
 swift 5.9+.
 
-Project: https://github.com/robertmeta/swiftmac
+Project: https://github.com/intelligrit/swiftmac
 
 ** Quick Install (requires swift compiler)
  - make swiftmac (from emacspeak root, ignore warnings)
@@ -24,7 +24,7 @@ Project: https://github.com/robertmeta/swiftmac
   (setopt tts-notification-device "right") 
   ; initialize Emacspeak
   (require 'emacspeak-setup)
-  ; more options: https://github.com/robertmeta/swiftmac/
+  ; more options: https://github.com/intelligrit/swiftmac/
 #+END_SRC
 
 ** See long names for voices
@@ -37,4 +37,4 @@ Project: https://github.com/robertmeta/swiftmac
  - https://github.com/arkasas/OggDecoder.git
 
 ** Bugs?
- - https://github.com/robertmeta/swiftmac/issues
+ - https://github.com/intelligrit/swiftmac/issues

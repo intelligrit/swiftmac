@@ -40,7 +40,7 @@ The server processes single-line commands from stdin:
 
 ### Dependencies
 
-- **OggDecoder** - External package from github.com/robertmeta/OggDecoder for audio file support
+- **OggDecoder** - External package from github.com/intelligrit/OggDecoder for audio file support
 - **AVFoundation** - System speech synthesis and audio playbook
 - **Network** - TCP listener for network-based operation
 

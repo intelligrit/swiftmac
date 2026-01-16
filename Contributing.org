@@ -53,7 +53,7 @@ Add this to your shell profile (=~/.zshrc= or =~/.bashrc=) to make it permanent.
 
 1. Clone the repository:
    #+BEGIN_SRC shell
-   git clone https://github.com/robertmeta/swiftmac.git
+   git clone https://github.com/intelligrit/swiftmac.git
    cd swiftmac
    #+END_SRC
 
@@ -374,8 +374,8 @@ Documentation improvements are always welcome! Key files:
 
 ** Getting Help
 
-- GitHub Issues: https://github.com/robertmeta/swiftmac/issues
-- Discussion: https://github.com/robertmeta/swiftmac/discussions
+- GitHub Issues: https://github.com/intelligrit/swiftmac/issues
+- Discussion: https://github.com/intelligrit/swiftmac/discussions
 
 ** License
 

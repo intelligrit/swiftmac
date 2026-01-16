@@ -155,7 +155,7 @@ super-nuke: clean
 	@rm -rf ~/Library/Caches/org.swift.swiftpm
 	@echo "Cache cleared and project rebuilt."
 
-GITHUB_USER = robertmeta
+GITHUB_USER = intelligrit
 REPO_NAME = swiftmac
 LATEST_RELEASE_URL = https://api.github.com/repos/$(GITHUB_USER)/$(REPO_NAME)/releases/latest
 DOWNLOAD_URL = $(shell curl -s $(LATEST_RELEASE_URL) | grep "browser_download_url" | cut -d '"' -f 4)

@@ -22,7 +22,7 @@ let package = Package(
     // Pin to specific revision for faster, cacheable builds
     // To update: run 'make update-ogg'
     .package(
-      url: "https://github.com/robertmeta/OggDecoder.git",
+      url: "https://github.com/intelligrit/OggDecoder.git",
       revision: "7679b8228978c258d2ad2dd38ba2f4f96d9d97be")
   ],
   targets: [
