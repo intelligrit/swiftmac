@@ -170,67 +170,178 @@ class ChunkQueue {
 
 let chunkQueue = ChunkQueue()
 
-// Aggressive silence trimming - safe now because chunks are single-buffer units
-func detectSilenceBounds(buffer: AVAudioPCMBuffer, threshold: Float = 0.01) -> (
-  start: Int, end: Int
-)? {
+struct UtteranceTrimState {
+  var pendingBuffer: AVAudioPCMBuffer?
+  var hasScheduledBuffer = false
+}
+
+let utteranceTrimLock = NSLock()
+var utteranceTrimState = UtteranceTrimState()
+
+func firstNonSilentFrame(buffer: AVAudioPCMBuffer, threshold: Float = 0.01) -> Int? {
   guard let channelData = buffer.floatChannelData?[0] else { return nil }
   let frameLength = Int(buffer.frameLength)
 
-  // Find first non-silent sample
-  var start = 0
   for i in 0..<frameLength {
     if abs(channelData[i]) > threshold {
-      start = i
-      break
+      return i
     }
   }
 
-  // Find last non-silent sample
-  var end = frameLength - 1
+  return nil
+}
+
+func lastNonSilentFrame(buffer: AVAudioPCMBuffer, threshold: Float = 0.01) -> Int? {
+  guard let channelData = buffer.floatChannelData?[0] else { return nil }
+  let frameLength = Int(buffer.frameLength)
+
   for i in stride(from: frameLength - 1, through: 0, by: -1) {
     if abs(channelData[i]) > threshold {
-      end = i
-      break
+      return i
     }
   }
 
-  if start >= end {
+  return nil
+}
+
+func copyBufferSlice(buffer: AVAudioPCMBuffer, startFrame: Int, endFrame: Int) -> AVAudioPCMBuffer? {
+  let frameLength = Int(buffer.frameLength)
+
+  guard startFrame >= 0, endFrame < frameLength, startFrame <= endFrame else {
     return nil
   }
 
-  return (start, end)
-}
-
-func trimSilence(buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
-  guard let bounds = detectSilenceBounds(buffer: buffer) else {
+  if startFrame == 0 && endFrame == frameLength - 1 {
     return buffer
   }
 
-  let trimmedLength = bounds.end - bounds.start + 1
-  guard let format = buffer.format as? AVAudioFormat,
-    let trimmedBuffer = AVAudioPCMBuffer(
-      pcmFormat: format, frameCapacity: AVAudioFrameCount(trimmedLength))
+  let copiedLength = endFrame - startFrame + 1
+
+  guard
+    let copiedBuffer = AVAudioPCMBuffer(
+      pcmFormat: buffer.format,
+      frameCapacity: AVAudioFrameCount(copiedLength))
   else {
     return buffer
   }
 
-  trimmedBuffer.frameLength = AVAudioFrameCount(trimmedLength)
+  copiedBuffer.frameLength = AVAudioFrameCount(copiedLength)
 
-  // Copy non-silent audio data
   for channel in 0..<Int(buffer.format.channelCount) {
     guard let sourceData = buffer.floatChannelData?[channel],
-      let destData = trimmedBuffer.floatChannelData?[channel]
+      let destData = copiedBuffer.floatChannelData?[channel]
     else {
       continue
     }
 
-    for i in 0..<trimmedLength {
-      destData[i] = sourceData[bounds.start + i]
-    }
+    memcpy(
+      destData,
+      sourceData.advanced(by: startFrame),
+      copiedLength * MemoryLayout<Float>.size
+    )
   }
 
-  return trimmedBuffer
+  return copiedBuffer
+}
+
+func trimLeadingSilence(buffer: AVAudioPCMBuffer, threshold: Float = 0.01) -> AVAudioPCMBuffer? {
+  guard buffer.floatChannelData?[0] != nil else {
+    return buffer
+  }
+
+  guard let firstFrame = firstNonSilentFrame(buffer: buffer, threshold: threshold) else {
+    return nil
+  }
+
+  return copyBufferSlice(
+    buffer: buffer,
+    startFrame: firstFrame,
+    endFrame: Int(buffer.frameLength) - 1
+  )
+}
+
+func trimTrailingSilence(buffer: AVAudioPCMBuffer, threshold: Float = 0.01) -> AVAudioPCMBuffer? {
+  guard buffer.floatChannelData?[0] != nil else {
+    return buffer
+  }
+
+  guard let lastFrame = lastNonSilentFrame(buffer: buffer, threshold: threshold) else {
+    return nil
+  }
+
+  return copyBufferSlice(
+    buffer: buffer,
+    startFrame: 0,
+    endFrame: lastFrame
+  )
+}
+
+func trimSilence(buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+  guard buffer.floatChannelData?[0] != nil else {
+    return buffer
+  }
+
+  guard
+    let firstFrame = firstNonSilentFrame(buffer: buffer),
+    let lastFrame = lastNonSilentFrame(buffer: buffer)
+  else {
+    return nil
+  }
+
+  return copyBufferSlice(
+    buffer: buffer,
+    startFrame: firstFrame,
+    endFrame: lastFrame
+  )
+}
+
+func resetUtteranceTrimState() {
+  utteranceTrimLock.lock()
+  utteranceTrimState = UtteranceTrimState()
+  utteranceTrimLock.unlock()
+}
+
+func bufferReadyForPlayback(afterReceiving buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+  utteranceTrimLock.lock()
+  defer { utteranceTrimLock.unlock() }
+
+  let pendingBuffer = utteranceTrimState.pendingBuffer
+  utteranceTrimState.pendingBuffer = buffer
+
+  guard let pendingBuffer else {
+    return nil
+  }
+
+  if utteranceTrimState.hasScheduledBuffer {
+    return pendingBuffer
+  }
+
+  let leadingTrimmedBuffer = trimLeadingSilence(buffer: pendingBuffer)
+  if leadingTrimmedBuffer != nil {
+    utteranceTrimState.hasScheduledBuffer = true
+  }
+
+  return leadingTrimmedBuffer
+}
+
+func finalBufferReadyForPlayback() -> AVAudioPCMBuffer? {
+  utteranceTrimLock.lock()
+  defer { utteranceTrimLock.unlock() }
+
+  guard let pendingBuffer = utteranceTrimState.pendingBuffer else {
+    utteranceTrimState = UtteranceTrimState()
+    return nil
+  }
+
+  let finalBuffer: AVAudioPCMBuffer?
+  if utteranceTrimState.hasScheduledBuffer {
+    finalBuffer = trimTrailingSilence(buffer: pendingBuffer)
+  } else {
+    finalBuffer = trimSilence(buffer: pendingBuffer)
+  }
+
+  utteranceTrimState = UtteranceTrimState()
+  return finalBuffer
 }
 
 // Apply channel mode to buffer via PCM manipulation
@@ -299,19 +410,24 @@ func applyChannelMode(to inputBuffer: AVAudioPCMBuffer, mode: ChannelMode) -> AV
 let bufferHandler: (AVAudioBuffer) -> Void = { buffer in
   guard let pcmBuffer = buffer as? AVAudioPCMBuffer else { return }
 
-  // Detect end of utterance - notify chunk queue to process next
   if pcmBuffer.frameLength == 0 {
+    if let finalBuffer = finalBufferReadyForPlayback() {
+      scheduleSpeechBuffer(finalBuffer)
+    }
+
     chunkQueue.notifyComplete()
     return
   }
 
-  // Trim silence aggressively (safe because chunks are single-buffer units)
-  guard let trimmedBuffer = trimSilence(buffer: pcmBuffer) else { return }
+  guard let trimmedBuffer = bufferReadyForPlayback(afterReceiving: pcmBuffer) else { return }
 
+  scheduleSpeechBuffer(trimmedBuffer)
+}
+
+func scheduleSpeechBuffer(_ trimmedBuffer: AVAudioPCMBuffer) {
   // Determine routing (device + channel) based on server type
   let routing = isNotificationServer ? cachedNotificationRouting : cachedSpeechRouting
 
-  // Apply PCM channel manipulation (synchronous)
   let channelBuffer = applyChannelMode(to: trimmedBuffer, mode: routing.channelMode)
 
   setupLock.lock()
@@ -598,7 +714,7 @@ func splitOnSquareStar(_ input: String) -> [String] {
   return result
 }
 
-// Split text into small chunks (15 words) to ensure single-buffer utterances
+// Split text into small chunks to keep utterances short and predictable.
 func chunkText(_ text: String, maxWords: Int = 15) -> [String] {
   let words = text.split(separator: " ", omittingEmptySubsequences: true)
 
@@ -705,6 +821,7 @@ func instantStopSpeaking() async {
 
   // Clear any pending chunks
   chunkQueue.clear()
+  resetUtteranceTrimState()
 
   debugLogger.log("Speech stopped and buffers flushed")
   // NOTE: We do NOT cancel audio icons and tones here
